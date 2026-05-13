@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "beads": {
+      "source": "gastownhall/beads",
+      "sourceType": "github",
+      "skillPath": "plugins/beads/skills/beads/SKILL.md",
+      "computedHash": "2a7d1cc34eb1760181fc1f72094491be71ad7ab10ee1a7b1d629621783b9ecd6"
+    }
+  }
+}
