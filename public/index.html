@@ -13,6 +13,60 @@
   html.cursor-hidden #audio-toggle { opacity: 0.1; }
   #audio-toggle.playing { opacity: 0.25; }
   html.cursor-hidden #audio-toggle.playing { opacity: 0.08; }
+
+  /* Info button */
+  #info-btn {
+    display: inline-block;
+    width: 18px; height: 18px;
+    margin-top: 5px; padding: 0;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    background: none; color: rgba(255,255,255,0.45);
+    font-family: monospace; font-size: 11px;
+    line-height: 16px; text-align: center;
+    cursor: pointer; pointer-events: auto;
+    transition: color 0.3s, border-color 0.3s;
+  }
+  #info-btn:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.5); }
+  html.cursor-hidden #legend #info-btn { opacity: 0.8; }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    display: none;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal-panel {
+    background: #111122;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 4px;
+    padding: 24px 28px 20px;
+    max-width: 440px; width: 90%;
+    color: rgba(255,255,255,0.75);
+    font-family: monospace; font-size: 12px;
+    line-height: 1.55;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+  .modal-panel h2 {
+    font-size: 13px; font-weight: normal;
+    color: rgba(255,255,255,0.9);
+    margin: 0 0 12px; letter-spacing: 0.5px;
+  }
+  .modal-panel p { margin: 0 0 10px; }
+  .modal-panel p:last-child { margin-bottom: 0; }
+  .modal-close {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none;
+    color: rgba(255,255,255,0.35);
+    font-size: 18px; cursor: pointer; padding: 0;
+    line-height: 1;
+    transition: color 0.3s;
+  }
+  .modal-close:hover { color: rgba(255,255,255,0.9); }
 </style>
 </head>
 <body>
@@ -22,6 +76,17 @@
 <div id="legend" style="position:fixed;bottom:16px;right:16px;color:#ffffff;font-family:monospace;font-size:11px;opacity:0.5;pointer-events:none;">
   <div style="margin-bottom:4px;opacity:0.7">PHOENIX TRANSIT ORBITS</div>
   <div id="legend-entries"></div>
+  <button id="info-btn" title="About">?</button>
+</div>
+<div class="modal-overlay" id="modal">
+  <div class="modal-panel">
+    <button class="modal-close" id="modal-close">&times;</button>
+    <h2>About Phoenix Transit Orbits</h2>
+    <p>A real-time visualization of Phoenix Valley Metro light rail trains, mapped onto a solar system metaphor. Each orbit ring represents a light rail route, named after a planet. The glowing dots are actual train vehicles moving along their routes.</p>
+    <p><strong>Visual cues:</strong> Dots glow brighter and leave longer trails at higher speeds. Dots jitter while in transit and sit still when approaching or stopped at a station. The central sun pulses with a 3-second breathing cycle. Stars are static decoration.</p>
+    <p><strong>Audio:</strong> Optional ambient music from Soma.fm Deep Space One — toggle at bottom-left.</p>
+    <p><strong>Data:</strong> Live vehicle positions from Valley Metro's GTFS-realtime feed, polled every 7 seconds via a Cloudflare Worker proxy.</p>
+  </div>
 </div>
 <script>
 const canvas = document.getElementById('c');
@@ -406,6 +471,21 @@ audioBtn.addEventListener('click', (e) => {
   }
 });
 document.addEventListener('click', startAudio, { once: true });
+
+// Info modal
+const modal = document.getElementById('modal');
+const infoBtn = document.getElementById('info-btn');
+const modalClose = document.getElementById('modal-close');
+const modalPanel = modal.querySelector('.modal-panel');
+
+function showModal() { modal.classList.add('visible'); }
+function hideModal() { modal.classList.remove('visible'); }
+
+infoBtn.addEventListener('click', (e) => { e.stopPropagation(); showModal(); });
+modalClose.addEventListener('click', hideModal);
+modal.addEventListener('click', hideModal);
+modalPanel.addEventListener('click', (e) => { e.stopPropagation(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideModal(); });
 </script>
 </body>
 </html>
