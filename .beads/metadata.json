@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "sibi_vibe_off",
+  "project_id": "2e498d8b-e64e-45fa-8e0d-c1044d19b4e7"
+}
