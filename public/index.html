@@ -129,13 +129,17 @@ function updateVehicles(entities, dt) {
 
     if (!VEHICLES[vid]) {
       // New vehicle: spawn at random angle on its orbit
+      const startAngle = Math.random() * Math.PI * 2;
       VEHICLES[vid] = {
         id: vid,
         routeId: routeId,
-        angle: Math.random() * Math.PI * 2,
+        angle: startAngle,
+        targetAngle: startAngle,
         speed: v.position?.speed || 0,
         label: v.vehicle.label || '',
         bearing: v.position?.bearing || 0,
+        currentStatus: v.currentStatus || 'IN_TRANSIT_TO',
+        seed: Math.random() * 1000, // unique per-vehicle seed for jitter
       };
     }
 
@@ -149,13 +153,14 @@ function updateVehicles(entities, dt) {
     const bearing = v.position?.bearing ?? veh.bearing;
     const dir = 1;
 
-    // Advance angle
-    veh.angle += angularVelocity * dir * dt;
-    veh.angle = ((veh.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    // Set target angle — render loop will lerp toward it for smooth motion
+    veh.targetAngle += angularVelocity * dir * dt;
+    veh.targetAngle = ((veh.targetAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
     veh.speed = v.position?.speed || 0;
     veh.label = v.vehicle.label || veh.label;
     veh.bearing = bearing;
+    veh.currentStatus = v.currentStatus || veh.currentStatus;
   }
 
   // Remove vehicles no longer in the feed
@@ -234,7 +239,7 @@ function drawOrbits(ctx, cx, cy, scale) {
   }
 }
 
-function drawTrains(ctx, cx, cy, scale) {
+function drawTrains(ctx, cx, cy, scale, t) {
   const dimFactor = isDimmed() ? 0.3 : 1;
 
   for (const vid of Object.keys(VEHICLES)) {
@@ -247,9 +252,16 @@ function drawTrains(ctx, cx, cy, scale) {
     const tiltRad = (route.tilt * Math.PI) / 180;
     const angle = v.angle;
 
-    // Position on rotated ellipse
-    const x = cx + Math.cos(angle) * rx * Math.cos(tiltRad) - Math.sin(angle) * ry * Math.sin(tiltRad);
-    const y = cy + Math.cos(angle) * rx * Math.sin(tiltRad) + Math.sin(angle) * ry * Math.cos(tiltRad);
+    // Position on rotated ellipse (orbit path, no jitter)
+    const ox = cx + Math.cos(angle) * rx * Math.cos(tiltRad) - Math.sin(angle) * ry * Math.sin(tiltRad);
+    const oy = cy + Math.cos(angle) * rx * Math.sin(tiltRad) + Math.sin(angle) * ry * Math.cos(tiltRad);
+
+    // Particle flicker / jitter — only when in transit (not arriving/stopped)
+    const isJittering = v.currentStatus === 'IN_TRANSIT_TO';
+    const jx = isJittering ? Math.sin(t * 0.017 + v.seed) * 0.6 + Math.cos(t * 0.023 + v.seed * 1.7) * 0.4 : 0;
+    const jy = isJittering ? Math.cos(t * 0.019 + v.seed * 0.7) * 0.6 + Math.sin(t * 0.013 + v.seed * 3.1) * 0.4 : 0;
+    const x = ox + jx;
+    const y = oy + jy;
 
     const speed = v.speed;
 
@@ -282,7 +294,7 @@ function drawTrains(ctx, cx, cy, scale) {
         ctx.strokeStyle = route.glow;
         ctx.lineWidth = 0.5;
         ctx.beginPath();
-        ctx.moveTo(x, y);
+        ctx.moveTo(ox, oy);
         ctx.lineTo(segX, segY);
         ctx.stroke();
       }
@@ -325,11 +337,23 @@ function render() {
   const scale = Math.min(w, h);
   const t = performance.now();
 
+  // Smooth angle interpolation toward target (lerp each frame)
+  const LERP = 0.12;
+  for (const vid of Object.keys(VEHICLES)) {
+    const v = VEHICLES[vid];
+    let diff = v.targetAngle - v.angle;
+    // Handle angle wrap-around for shortest path
+    if (diff > Math.PI) diff -= Math.PI * 2;
+    if (diff < -Math.PI) diff += Math.PI * 2;
+    v.angle += diff * LERP;
+    v.angle = ((v.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  }
+
   ctx.clearRect(0, 0, w, h);
 
   drawStars(ctx);         // static star field
   drawOrbits(ctx, cx, cy, scale);  // orbit rings
-  drawTrains(ctx, cx, cy, scale);  // vehicles on orbits
+  drawTrains(ctx, cx, cy, scale, t);  // vehicles on orbits
   drawSun(ctx, cx, cy, scale, t);  // sun on top
 
   requestAnimationFrame(render);
